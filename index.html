@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+	<title>Harta transport public prahova</title>
+	<link rel="stylesheet" href="./leaflet/leaflet.css"/>
+	<script src="./leaflet/leaflet.js"></script>
+	
+	<style>
+		#top 	{ height: 10vh; }
+		#bottom	{ height: 10vh:	}
+		#map 	{ height: 80vh; }
+	</style>
+</head>
+
+<body>
+	<div id="top">
+		<h2>Harta transport public Prahova</h2>
+		<p>proiect personal care foloseste API-urile folosite de aplicatia Transport Judetean Prahova</p>
+	</div>
+	<div id="map"></div>
+	<div id="bottom">
+		<p>Datele de autobuz sunt furnizate de catre API-ul (privat?) de la Consiliul Judetean Prahova (CJPH)!!!</p>
+		<a href="https://github.com/hurghdurg/publicbus">Link GitHub</a>
+		<a href="https://cjph.ro/">CJPH</a>
+	</div>
+	<script>
+		var map = L.map('map').setView([44.936, 26.018], 13);
+		L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			minZoom: 11,
+			maxZoom: 15,
+			attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+			referrerPolicy: true
+		}).addTo(map);
+		
+		const markers = new Map();
+		
+		async function updateMap() {
+			try {
+				const response = await fetch("/fetch");
+
+				if (!response.ok) {
+					throw new Error(`error: ${response.status}`);
+				}
+
+				const data = await response.json();
+
+				for (const point of data) {
+					const lat = point.position.latitude;
+					const lon = point.position.longitude;
+					
+					const popupContent = `
+						<b>${point.numar}</b><br>
+						${point.traseu}<br>
+						ID: ${point.id}
+						`;
+					
+					if (markers.has(point.id)) {
+						const marker = markers.get(point.id);
+					
+						marker.setLatLng([lat, lon]);
+						marker.setPopupContent(popupContent);
+            				} else {
+                				const marker = L.marker([lat, lon])
+                    				.addTo(map)
+                    				.bindPopup(popupContent);
+
+                				markers.set(point.id, marker);
+            				}
+        			}
+
+        			console.log("map updated:", new Date().toLocaleTimeString());
+
+    			} catch (error) {
+        			console.error("failed to fetch route data:", error);
+    			}
+		}
+
+		updateMap();
+		setInterval(updateMap, 15000);
+
+	</script>
+</body>
+</html>
